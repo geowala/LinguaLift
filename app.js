@@ -254,20 +254,10 @@ const problems = [
   solution: "The key is identifying the recurring Albanian question words and verb forms, then reusing them across the later translation tasks.",
   datasets: [
     {
-      label: "Core question words and patterns",
-      headers: ["Form", "Meaning"],
+      label: "Albanian",
+      headers: ["Form"],
       rows: [
-        ["pse", "why"],
-        ["ku", "where"],
-        ["kush", "who"],
-        ["kur", "when"],
-        ["çfarë", "what"],
-        ["si", "how"],
-        ["a ... ?", "did / yes-no question"],
-        ["dikë", "someone"],
-        ["gjë", "anything"],
-        ["macja", "the cat"],
-        ["ati", "his father"]
+        ["Here are some questions in Albanian, an Indo-European language language spoken in the Balkans region of Europe. It is the official language of Albania and the majority language of Kosovo. These questions are in random order, while their English translations are listed in alphabetical order. NOTE: ë is a vowel and ç is a consonant, and you is always singular."],
       ]
     }
   ],
