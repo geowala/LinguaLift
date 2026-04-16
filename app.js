@@ -1,3 +1,5 @@
+
+
 function exactChecker(...answers) {
   const normalizedAnswers = answers.map((answer) => normalize(answer));
   return (value) => normalizedAnswers.includes(normalize(value));
@@ -9,10 +11,67 @@ function matchingChecker(answerKey) {
     Array.isArray(selections) &&
     selections.length === normalizedKey.length &&
     selections.every((item, index) => String(item || "").toUpperCase() === normalizedKey[index]);
+    
+}
+function countCorrectMatches(answerKey, selections) {
+  const normalizedKey = answerKey.map((item) => String(item).toUpperCase());
+  if (!Array.isArray(selections)) return 0;
+
+  return normalizedKey.reduce((total, correctAnswer, index) => {
+    return total + (String(selections[index] || "").toUpperCase() === correctAnswer ? 1 : 0);
+  }, 0);
 }
 
-const problems = [
+function updateProblemScoreDisplay(score, total) {
+  if (!problemScore) return;
 
+  if (typeof score === "number" && typeof total === "number") {
+    problemScore.textContent = `Score: ${score} / ${total}`;
+  } else {
+    problemScore.textContent = "Score: -";
+  }
+}
+const problems = [
+ {
+  id: "abawiri-translation-1",
+  mode: "translation_table",
+  type: "adapted",
+  title: "Getting the tone right in Abawiri",
+  contest: "OzCLO",
+  year: 2023,
+  topic: "Translation",
+  difficulty: 4,
+  sourceName: "OzCLO 2023 National Round PDF",
+  sourceUrl: "https://ozclo.org.au/wp-content/uploads/2024/03/OzCLO-2023_R2.pdf",
+  prompt: "Translate the Abawiri phrases into English.",
+  hint: "Work out the possessive order first, then track the tone contrasts.",
+  solution: "Each row should be solved independently by identifying the head noun and possessor.",
+  datasets: [
+    {
+      label: "Reference phrases",
+      headers: ["Abawiri", "English"],
+      rows: [
+        ["[ɓɔ́rú ɠwáku]", "fish's ear"],
+        ["[sɔ̀krɛ̄ dúkè]", "rat's bird"],
+        ["[dɛ̀βî àitè]", "child's father"],
+        ["[àitè dɛ̀βì]", "father's child"]
+      ]
+    }
+  ],
+  translationTable: {
+    headers: ["Item", "Phrase", "Your translation"],
+    rows: [
+      { label: "a.", prompt: "[àjà ɓɔ́rú]" },
+      { label: "b.", prompt: "[dúkè àitè]" },
+      { label: "c.", prompt: "[wùtù dúkè]" }
+    ]
+  },
+  acceptableAnswers: [
+    ["chicken's fish"],
+    ["bird's father"],
+    ["car's bird"]
+  ]
+},
   {
     id: "ozclo-wash-them-for-me",
     mode: "matching",
@@ -551,17 +610,17 @@ const defaultState = {
 };
 
 const seededOverall = [
-  { name: "N. Wang", score: 26, meta: "archive accuracy 93%" },
-  { name: "H. Chang", score: 24, meta: "matching specialist" },
-  { name: "L. Kelman", score: 22, meta: "strong on morphology" },
-  { name: "D. Lu", score: 20, meta: "mixed contest bank" }
+  { name: "ME", score: 26, meta: "fdsa" },
+  { name: "ME", score: 24, meta: "asfd" },
+  { name: "ME", score: 22, meta: "safds" },
+  { name: "ME", score: 20, meta: "asdf" }
 ];
 
 const seededSprint = [
-  { name: "G. Pirpiris", score: 220, meta: "best sprint board" },
-  { name: "B. Jin", score: 200, meta: "best sprint board" },
-  { name: "N. Wang", score: 190, meta: "best sprint board" },
-  { name: "H. Chang", score: 180, meta: "best sprint board" }
+  { name: "ME", score: 220, meta: "best sprint board" },
+  { name: "ME", score: 200, meta: "best sprint board" },
+  { name: "ME", score: 190, meta: "best sprint board" },
+  { name: "ME", score: 180, meta: "best sprint board" }
 ];
 
 let state = loadState();
@@ -577,7 +636,7 @@ let sprintState = {
   order: [],
   intervalId: null
 };
-
+const problemScore = document.querySelector("#problemScore");
 const contestFilter = document.querySelector("#contestFilter");
 const topicFilter = document.querySelector("#topicFilter");
 const difficultyFilter = document.querySelector("#difficultyFilter");
@@ -630,6 +689,10 @@ const sprintFeedback = document.querySelector("#sprintFeedback");
 const leaderboardList = document.querySelector("#leaderboardList");
 const boardButtons = [...document.querySelectorAll("[data-board]")];
 const navButtons = [...document.querySelectorAll("[data-nav-target]")];
+const translationTablePanel = document.querySelector("#translationTablePanel");
+const translationTableWrap = document.querySelector("#translationTableWrap");
+
+
 
 initialize();
 
@@ -783,19 +846,17 @@ function selectProblem(problem) {
   setFeedback(hintCard, "Hints appear here.", "muted");
   setFeedback(resultCard, "Checking feedback appears here.", "muted");
   setFeedback(solutionCard, "Worked solutions appear here.", "muted");
+  matchingPanel.classList.add("hidden");
+translationTablePanel.classList.add("hidden");
+textAnswerBlock.classList.add("hidden");
 
-  if (!problem) {
-    problemMeta.textContent = "Select a problem";
-    problemTitle.textContent = "Your active workspace will appear here.";
-    problemDifficulty.textContent = "-";
-    problemPrompt.textContent = "Choose any item from the bank to start solving.";
-    sourceStrip.classList.add("hidden");
-    problemDataset.innerHTML = "";
-    matchingPanel.classList.add("hidden");
-    textAnswerBlock.classList.remove("hidden");
-    return;
-  }
-
+  if (problem.mode === "matching") {
+  renderMatchingProblem(problem);
+} else if (problem.mode === "translation_table") {
+  renderTranslationTable(problem);
+} else {
+  textAnswerBlock.classList.remove("hidden");
+}
   pushHistory(problem.id);
   bookmarkButton.textContent = state.bookmarks.includes(problem.id) ? "★" : "☆";
   problemMeta.textContent = `${problem.label} · ${problem.contest} · ${problem.topic}`;
@@ -814,8 +875,9 @@ function selectProblem(problem) {
 
   if (problem.mode === "matching") {
     renderMatchingProblem(problem);
+  } else if (problem.mode === "translation_table") {
+    renderTranslationTable(problem);
   } else {
-    matchingPanel.classList.add("hidden");
     textAnswerBlock.classList.remove("hidden");
   }
 
@@ -869,22 +931,45 @@ function handleCheckAnswer() {
 
   let correct = false;
   let answerValue = "";
+  let score = null;
+  let total = null;
 
   if (currentProblem.mode === "matching") {
     if (currentMatchSelections.some((item) => !item)) {
       setFeedback(resultCard, "Complete each match slot before checking.", "error");
       return;
     }
+
     answerValue = currentMatchSelections.join("");
-    correct = currentProblem.check(currentMatchSelections);
+    total = currentProblem.answerKey.length;
+    score = countCorrectMatches(currentProblem.answerKey, currentMatchSelections);
+    correct = score === total;
+    updateProblemScoreDisplay(score, total);
+  } else if (currentProblem.mode === "translation_table") {
+    const inputs = [...document.querySelectorAll(".translation-input")];
+    if (inputs.some((input) => !input.value.trim())) {
+      setFeedback(resultCard, "Complete each table row before checking.", "error");
+      return;
+    }
+
+    const tableResult = checkTranslationTable(currentProblem);
+    correct = tableResult.correct;
+    score = tableResult.score;
+    total = tableResult.total;
+    answerValue = tableResult.results.map((item) => item.userAnswer);
+    updateProblemScoreDisplay(score, total);
   } else {
     const answer = answerInput.value.trim();
     if (!answer) {
       setFeedback(resultCard, "Add an answer first so the problem can be checked.", "error");
       return;
     }
+
     answerValue = answer;
     correct = currentProblem.check(answer);
+    score = correct ? 1 : 0;
+    total = 1;
+    updateProblemScoreDisplay(score, total);
   }
 
   state.attempts.unshift({
@@ -892,16 +977,17 @@ function handleCheckAnswer() {
     problemId: currentProblem.id,
     correct,
     answer: answerValue,
+    score,
+    total,
     timestamp: Date.now()
   });
 
   if (correct) {
     removeFromReview(currentProblem.id);
-    setFeedback(resultCard, "Correct. Nice work.", "success");
+    setFeedback(resultCard, `Correct. You scored ${score} / ${total}.`, "success");
   } else {
     pushToReview(currentProblem.id);
-    const expected = currentProblem.mode === "matching" ? currentProblem.answerKey.join("") : currentProblem.acceptableAnswers[0];
-    setFeedback(resultCard, `Not quite. Try again. Expected answer: ${expected}.`, "error");
+    setFeedback(resultCard, `You scored ${score} / ${total}. Incorrect parts are highlighted.`, "error");
   }
 
   persistState();
@@ -909,36 +995,6 @@ function handleCheckAnswer() {
   renderReview();
   renderLeaderboards();
   renderProblemList();
-}
-
-function toggleBookmark() {
-  if (!currentProblem) {
-    return;
-  }
-
-  if (state.bookmarks.includes(currentProblem.id)) {
-    state.bookmarks = state.bookmarks.filter((id) => id !== currentProblem.id);
-  } else {
-    state.bookmarks.push(currentProblem.id);
-    pushToReview(currentProblem.id);
-  }
-
-  persistState();
-  renderDashboard();
-  renderReview();
-  selectProblem(currentProblem);
-}
-
-function renderDashboard() {
-  const attempts = state.attempts;
-  const solved = new Set(attempts.filter((attempt) => attempt.correct).map((attempt) => attempt.problemId)).size;
-  const accuracy = attempts.length ? Math.round((attempts.filter((attempt) => attempt.correct).length / attempts.length) * 100) : 0;
-  const bestSprint = state.sprintRuns[0]?.score || 0;
-
-  statSolved.textContent = String(solved);
-  statAccuracy.textContent = `${accuracy}%`;
-  statReview.textContent = String(state.reviewQueue.length);
-  statBest.textContent = String(bestSprint);
 }
 
 function renderHistory() {
@@ -1033,6 +1089,7 @@ function tickSprint() {
 function loadSprintProblem() {
   const problem = sprintState.order[sprintState.round - 1];
   if (!problem) {
+    translationTablePanel.classList.add("hidden");
     finishSprint();
     return;
   }
@@ -1230,4 +1287,80 @@ function formatTime(totalSeconds) {
 function normalize(value) {
   return value.toLowerCase().trim().replace(/\s+/g, " ").replace(/[^\p{L}\p{N}\-?]+/gu, "");
 }
+
+function renderTranslationTable(problem) {
+  translationTablePanel.classList.remove("hidden");
+  translationTableWrap.innerHTML = `
+    <section class="dataset-card">
+      <h4>Translation task</h4>
+      <table class="dataset-table translation-input-table">
+        <thead>
+          <tr>
+            ${problem.translationTable.headers.map((header) => `<th>${header}</th>`).join("")}
+          </tr>
+        </thead>
+        <tbody>
+          ${problem.translationTable.rows.map((row, index) => `
+            <tr>
+              <td>${row.label}</td>
+              <td>${row.prompt}</td>
+              <td>
+                <input
+                  type="text"
+                  class="translation-input"
+                  data-translation-index="${index}"
+                  placeholder="Type your translation..."
+                />
+              </td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    </section>
+  `;
+}
+
+function normalizeLoose(value) {
+  return String(value || "")
+    .toLowerCase()
+    .trim()
+    .replace(/[’']/g, "'")
+    .replace(/\s+/g, " ");
+}
+
+function checkTranslationTable(problem) {
+  const inputs = [...document.querySelectorAll(".translation-input")];
+  const results = [];
+  let score = 0;
+
+  inputs.forEach((input, index) => {
+    const userAnswer = normalizeLoose(input.value);
+    const accepted = (problem.acceptableAnswers[index] || []).map(normalizeLoose);
+    const isCorrect = accepted.includes(userAnswer);
+
+    input.classList.remove("correct-cell", "wrong-cell");
+
+    if (isCorrect) {
+      input.classList.add("correct-cell");
+      score += 1;
+    } else {
+      input.classList.add("wrong-cell");
+    }
+
+    results.push({
+      index,
+      userAnswer: input.value,
+      correct: isCorrect
+    });
+  });
+
+  return {
+    score,
+    total: inputs.length,
+    correct: score === inputs.length,
+    results
+  };
+}
+
+
 
