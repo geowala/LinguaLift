@@ -1,4 +1,32 @@
+const SUPABASE_URL = "https://jlmbxmjeopycmikcpalr.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpsbWJ4bWplb3B5Y21pa2NwYWxyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYyNzQ4ODAsImV4cCI6MjA5MTg1MDg4MH0.A55QtmLMwsS43XEhJanh7Cw5s-F23oDQpBxFk5hR634";
 
+const supabaseClient = window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_ANON_KEY
+);
+
+function renderDashboard() {
+  const attempts = state.attempts;
+  const solved = new Set(
+    attempts
+      .filter((attempt) => attempt.correct)
+      .map((attempt) => attempt.problemId)
+  ).size;
+
+  const accuracy = attempts.length
+    ? Math.round(
+        (attempts.filter((attempt) => attempt.correct).length / attempts.length) * 100
+      )
+    : 0;
+
+  const bestSprint = state.sprintRuns[0]?.score || 0;
+
+  statSolved.textContent = String(solved);
+  statAccuracy.textContent = `${accuracy}%`;
+  statReview.textContent = String(state.reviewQueue.length);
+  statBest.textContent = String(bestSprint);
+}
 
 function exactChecker(...answers) {
   const normalizedAnswers = answers.map((answer) => normalize(answer));
@@ -38,12 +66,13 @@ const problems = [
   type: "adapted",
   title: "Getting the tone right in Abawiri",
   contest: "OzCLO",
+  label: "Adapted from past paper",
   year: 2023,
   topic: "Translation",
   difficulty: 4,
   sourceName: "OzCLO 2023 National Round PDF",
   sourceUrl: "https://ozclo.org.au/wp-content/uploads/2024/03/OzCLO-2023_R2.pdf",
-  prompt: "Translate the Abawiri phrases into English.",
+  prompt: "Complete both tasks.",
   hint: "Work out the possessive order first, then track the tone contrasts.",
   solution: "Each row should be solved independently by identifying the head noun and possessor.",
   datasets: [
@@ -54,22 +83,51 @@ const problems = [
         ["[ɓɔ́rú ɠwáku]", "fish's ear"],
         ["[sɔ̀krɛ̄ dúkè]", "rat's bird"],
         ["[dɛ̀βî àitè]", "child's father"],
-        ["[àitè dɛ̀βì]", "father's child"]
+        ["[àitè dɛ̀βì]", "father's child"],
+        ["[àjà sɔ̀krɛ̀]", "chicken's rat"],
+        ["[dúkè sɔ̀rì]", "bird's earth"],
+        ["[dɛ̀βî wùtù]", "child's car"],
+        ["[sɔ̀rì ɓɔ́rú]", "earth's fish"]
       ]
     }
   ],
-  translationTable: {
-    headers: ["Item", "Phrase", "Your translation"],
-    rows: [
-      { label: "a.", prompt: "[àjà ɓɔ́rú]" },
-      { label: "b.", prompt: "[dúkè àitè]" },
-      { label: "c.", prompt: "[wùtù dúkè]" }
-    ]
-  },
-  acceptableAnswers: [
-    ["chicken's fish"],
-    ["bird's father"],
-    ["car's bird"]
+  translationTables: [
+    {
+      title: "Task 1",
+      prompt: "Translate the Abawiri phrases (a) to (c) into English.",
+      headers: ["Item", "Phrase", "Your translation"],
+      rows: [
+        { label: "a.", prompt: "[àjà ɓɔ́rú]" },
+        { label: "b.", prompt: "[dúkè àìtè]" },
+        { label: "c.", prompt: "[wùtù dúkè]" }
+      ],
+      acceptableAnswers: [
+        ["chicken's fish"],
+        ["bird's father"],
+        ["car's bird"]
+      ]
+    },
+    {
+      title: "Task 2",
+      prompt: "Translate the English phrases (d) to (i) into Abawiri.",
+      headers: ["Item", "Phrase", "Your translation"],
+      rows: [
+        { label: "d.", prompt: "car’s earth" },
+        { label: "e.", prompt: "bird’s car" },
+        { label: "f.", prompt: "father’s rat" },
+        { label: "g.", prompt: "child’s fish" },
+        { label: "h.", prompt: "earth’s chicken" },
+        { label: "i.", prompt: "father’s ear" }
+      ],
+      acceptableAnswers: [
+        ["[wùtù sɔ̀rì]", "wùtù sɔ̀rì"],
+        ["[dúkè wùtù]", "dúkè wùtù"],
+        ["[àìtè sɔ̀krɛ̀]", "àìtè sɔ̀krɛ̀"],
+        ["[dɛ̀βî ɓɔ́rú]", "dɛ̀βî ɓɔ́rú"],
+        ["[sɔ̀rì àjà]", "sɔ̀rì àjà"],
+        ["[àìtè ɠwáku]", "àìtè ɠwáku"]
+      ]
+    }
   ]
 },
   {
@@ -181,51 +239,143 @@ const problems = [
     ]
   },
   {
-    id: "ozclo-albanian",
-    mode: "matching",
-    type: "adapted",
-    title: "What / Where / Who / Why is Albanian?",
-    contest: "OzCLO",
-    label: "Adapted from past paper",
-    year: 2023,
-    topic: "Syntax",
-    difficulty: 4,
-    sourceName: "OzCLO 2023 National Round PDF",
-    sourceUrl: "https://ozclo.org.au/wp-content/uploads/2024/03/OzCLO-2023_R2.pdf",
-    prompt: "Match each Albanian-style interrogative to the most plausible English question. The core move is identifying the wh-word.",
-    hint: "Look for recurring initial words; they usually encode who, what, where, when, or why.",
-    solution: "These questions are driven by fronted interrogative elements. Once the wh-forms are sorted, the remaining verbal pieces are enough to distinguish the options.",
-    answerKey: ["D", "A", "F", "C", "B", "E"],
-    check: matchingChecker(["D", "A", "F", "C", "B", "E"]),
-    matching: {
-      prompts: [
-        "1. Pse erdhi?",
-        "2. Ku është libri?",
-        "3. Kush këndoi?",
-        "4. Kur mësove shqip?",
-        "5. Çfarë bleu?",
-        "6. Si vallëzove?"
-      ],
-      options: [
-        { key: "A", text: "Where is the book?" },
-        { key: "B", text: "What did he buy?" },
-        { key: "C", text: "When did you learn Albanian?" },
-        { key: "D", text: "Why did he come?" },
-        { key: "E", text: "How did you dance?" },
-        { key: "F", text: "Who sang?" }
+  id: "ozclo-albanian-full",
+  type: "adapted",
+  title: "What / Where / Who / Why is Albanian?",
+  contest: "OzCLO",
+  label: "Adapted from past paper",
+  year: 2023,
+  topic: "Syntax",
+  difficulty: 4,
+  sourceName: "OzCLO 2023 National Round PDF",
+  sourceUrl: "https://ozclo.org.au/wp-content/uploads/2024/03/OzCLO-2023_R2.pdf",
+  prompt: "Complete all three tasks.",
+  hint: "Solve the wh-words first: who, what, where, when, why, how, and yes/no. Then reuse that information for the translation tasks.",
+  solution: "The key is identifying the recurring Albanian question words and verb forms, then reusing them across the later translation tasks.",
+  datasets: [
+    {
+      label: "Core question words and patterns",
+      headers: ["Form", "Meaning"],
+      rows: [
+        ["pse", "why"],
+        ["ku", "where"],
+        ["kush", "who"],
+        ["kur", "when"],
+        ["çfarë", "what"],
+        ["si", "how"],
+        ["a ... ?", "did / yes-no question"],
+        ["dikë", "someone"],
+        ["gjë", "anything"],
+        ["macja", "the cat"],
+        ["ati", "his father"]
       ]
-    },
-    datasets: [
-      {
-        label: "Tactic",
-        headers: ["Move", "Reason"],
-        rows: [
-          ["Map the wh-forms first", "They usually unlock most of the table immediately."],
-          ["Use elimination aggressively", "Once two or three are fixed, the rest cascade."]
+    }
+  ],
+  tasks: [
+    {
+      mode: "matching",
+      title: "Task 1",
+      prompt: "Match the Albanian phrases with their English translations by writing the correct letter under each number.",
+      answerKey: ["U", "N", "O", "S", "I", "Q", "J", "D", "K", "E", "P", "C", "G", "L", "M", "B", "F", "H", "R", "A", "T"],
+      matching: {
+        prompts: [
+          "1. Pse është në Angli?",
+          "2. Kujt ia shiti?",
+          "3. Kë vrau?",
+          "4. Pse ia shite?",
+          "5. Kur arriti në Angli?",
+          "6. Kush është gati?",
+          "7. Kur mësove shqip?",
+          "8. Sa preu?",
+          "9. Ku është ati?",
+          "10. Çfarë bleu?",
+          "11. Kush është në Angli?",
+          "12. Si kërcëeve?",
+          "13. Çfarë është kjo?",
+          "14. Ku vajti macja?",
+          "15. Kë lau?",
+          "16. A vrave dikë?",
+          "17. Çfarë pive?",
+          "18. Kur ia shiti?",
+          "19. Kush është kjo?",
+          "20. A pive gjë?",
+          "21. Pse mësove shqip?"
+        ],
+        options: [
+          { key: "A", text: "Did you drink anything?" },
+          { key: "B", text: "Did you kill someone?" },
+          { key: "C", text: "How did you dance?" },
+          { key: "D", text: "How much did he cut?" },
+          { key: "E", text: "What did he buy?" },
+          { key: "F", text: "What did you drink?" },
+          { key: "G", text: "What is this?" },
+          { key: "H", text: "When did he sell it to him?" },
+          { key: "I", text: "When did he arrive in England?" },
+          { key: "J", text: "When did you learn Albanian?" },
+          { key: "K", text: "Where is his father?" },
+          { key: "L", text: "Where did the cat go?" },
+          { key: "M", text: "Who did he wash?" },
+          { key: "N", text: "Who did he sell it to?" },
+          { key: "O", text: "Who did he kill?" },
+          { key: "P", text: "Who is in England?" },
+          { key: "Q", text: "Who is ready?" },
+          { key: "R", text: "Who is this?" },
+          { key: "S", text: "Why did you sell it to him?" },
+          { key: "T", text: "Why did you learn Albanian?" },
+          { key: "U", text: "Why is he in England?" }
         ]
       }
-    ]
-  },
+    },
+    {
+      mode: "translation_table",
+      title: "Task 2",
+      prompt: "Translate these Albanian sentences into English.",
+      translationTables: [
+        {
+          title: "Task 2",
+          prompt: "Translate the Albanian sentences into English.",
+          headers: ["Item", "Phrase", "Your translation"],
+          rows: [
+            { label: "a.", prompt: "Ku kërceu?" },
+            { label: "b.", prompt: "A është macja gati?" },
+            { label: "c.", prompt: "Çfarë preve?" },
+            { label: "d.", prompt: "A shiti gjë?" }
+          ],
+          acceptableAnswers: [
+            ["where did he dance?", "where did she dance?"],
+            ["is the cat ready?"],
+            ["what did you cut?"],
+            ["did he sell anything?", "did she sell anything?"]
+          ]
+        }
+      ]
+    },
+    {
+      mode: "translation_table",
+      title: "Task 3",
+      prompt: "Translate these English sentences into Albanian.",
+      translationTables: [
+        {
+          title: "Task 3",
+          prompt: "Translate the English sentences into Albanian.",
+          headers: ["Item", "Phrase", "Your translation"],
+          rows: [
+            { label: "e.", prompt: "How much did his father drink?" },
+            { label: "f.", prompt: "What did you buy?" },
+            { label: "g.", prompt: "Did you wash someone?" },
+            { label: "h.", prompt: "How did the cat dance?" }
+          ],
+          acceptableAnswers: [
+            ["sa piu ati?", "sa piu ati i tij?"],
+            ["çfarë bleve?"],
+            ["a lave dikë?"],
+            ["si kërceu macja?"]
+          ]
+        }
+      ]
+    }
+  ]
+},
   {
     id: "ozclo-longgu",
     mode: "matching",
@@ -636,6 +786,12 @@ let sprintState = {
   order: [],
   intervalId: null
 };
+const emailInput = document.querySelector("#emailInput");
+const passwordInput = document.querySelector("#passwordInput");
+const signUpBtn = document.querySelector("#signUpBtn");
+const signInBtn = document.querySelector("#signInBtn");
+const signOutBtn = document.querySelector("#signOutBtn");
+const authStatus = document.querySelector("#authStatus");
 const problemScore = document.querySelector("#problemScore");
 const contestFilter = document.querySelector("#contestFilter");
 const topicFilter = document.querySelector("#topicFilter");
@@ -704,12 +860,32 @@ function initialize() {
   renderHistory();
   renderReview();
   renderLeaderboards();
+  updateAuthUI();
+  loadUserData();
+  supabaseClient.auth.onAuthStateChange(async () => {
+  await updateAuthUI();
+  await loadUserData();
+});
 }
 
 function populateFilters() {
-  contestFilter.innerHTML = ["All contests", ...new Set(problems.map((problem) => problem.contest))].map(renderOption).join("");
-  topicFilter.innerHTML = ["All topics", ...new Set(problems.map((problem) => problem.topic))].map(renderOption).join("");
-  difficultyFilter.innerHTML = ["All difficulties", 3, 4, 5].map(renderOption).join("");
+  contestFilter.innerHTML = ["All contests", ...new Set(problems.map((problem) => problem.contest))]
+    .map(renderOption)
+    .join("");
+
+  topicFilter.innerHTML = ["All topics", ...new Set(problems.map((problem) => problem.topic))]
+    .map(renderOption)
+    .join("");
+
+  difficultyFilter.innerHTML = ["All difficulties", 3, 4, 5]
+    .map(renderOption)
+    .join("");
+
+  contestFilter.value = "All contests";
+  topicFilter.value = "All topics";
+  difficultyFilter.value = "All difficulties";
+  entryTypeFilter.value = "All problems";
+  sortFilter.value = "recommended";
 }
 
 function renderOption(value) {
@@ -746,20 +922,56 @@ function attachEvents() {
       document.getElementById(button.dataset.navTarget)?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
   });
+  signUpBtn.addEventListener("click", async () => {
+  try {
+    await signUp(emailInput.value.trim(), passwordInput.value);
+    authStatus.textContent = "Account created. Check your email if confirmation is enabled.";
+    await updateAuthUI();
+    await loadUserData();
+  } catch (error) {
+    authStatus.textContent = error.message;
+  }
+});
+
+signInBtn.addEventListener("click", async () => {
+  try {
+    await signIn(emailInput.value.trim(), passwordInput.value);
+    authStatus.textContent = "Logged in.";
+    await updateAuthUI();
+    await loadUserData();
+  } catch (error) {
+    authStatus.textContent = error.message;
+  }
+});
+
+signOutBtn.addEventListener("click", async () => {
+  try {
+    await signOut();
+    authStatus.textContent = "Logged out.";
+    state.bookmarks = [];
+    state.reviewQueue = [];
+    persistState();
+    renderDashboard();
+    renderReview();
+    renderProblemList();
+  } catch (error) {
+    authStatus.textContent = error.message;
+  }
+});
 }
 
 function applyFilters() {
-  const contest = contestFilter.value;
-  const topic = topicFilter.value;
-  const difficulty = difficultyFilter.value;
-  const type = entryTypeFilter.value;
-  const sort = sortFilter.value;
+const contest = contestFilter.value || "All contests";
+const topic = topicFilter.value || "All topics";
+const difficulty = difficultyFilter.value || "All difficulties";
+const type = entryTypeFilter.value || "All problems";
+const sort = sortFilter.value || "recommended";
 
   filteredProblems = problems.filter((problem) => {
     const matchesContest = contest === "All contests" || problem.contest === contest;
     const matchesTopic = topic === "All topics" || problem.topic === topic;
     const matchesDifficulty = difficulty === "All difficulties" || String(problem.difficulty) === String(difficulty);
-    const matchesType = type === "All problems" || problem.type === type;
+    const matchesType = type === "All problems" || (problem.type || "adapted") === type;
     return matchesContest && matchesTopic && matchesDifficulty && matchesType;
   });
 
@@ -798,6 +1010,30 @@ function renderFilterChips() {
   ];
 
   activeFilterChips.innerHTML = chips.map((chip) => `<span>${chip}</span>`).join("");
+}
+
+function toggleBookmark() {
+  if (!currentProblem) return;
+
+  const id = currentProblem.id;
+  const isBookmarked = state.bookmarks.includes(id);
+
+  if (isBookmarked) {
+    // remove bookmark + remove from review
+    state.bookmarks = state.bookmarks.filter((item) => item !== id);
+    removeFromReview(id);
+  } else {
+    // add bookmark + add to review
+    state.bookmarks.push(id);
+    pushToReview(id);
+  }
+
+  // update UI
+  bookmarkButton.textContent = state.bookmarks.includes(id) ? "★" : "☆";
+
+  persistState();
+  renderReview();
+  renderDashboard();
 }
 
 function renderProblemList() {
@@ -847,23 +1083,28 @@ function selectProblem(problem) {
   setFeedback(resultCard, "Checking feedback appears here.", "muted");
   setFeedback(solutionCard, "Worked solutions appear here.", "muted");
   matchingPanel.classList.add("hidden");
-translationTablePanel.classList.add("hidden");
-textAnswerBlock.classList.add("hidden");
+  translationTablePanel.classList.add("hidden");
+  textAnswerBlock.classList.add("hidden");
+  updateProblemScoreDisplay(null, null);
 
-  if (problem.mode === "matching") {
-  renderMatchingProblem(problem);
-} else if (problem.mode === "translation_table") {
-  renderTranslationTable(problem);
-} else {
-  textAnswerBlock.classList.remove("hidden");
-}
+  if (!problem) {
+    problemMeta.textContent = "Select a problem";
+    problemTitle.textContent = "Your active workspace will appear here.";
+    problemDifficulty.textContent = "-";
+    problemPrompt.textContent = "Choose any item from the bank to start solving.";
+    sourceStrip.classList.add("hidden");
+    problemDataset.innerHTML = "";
+    bookmarkButton.textContent = "☆";
+    return;
+  }
+
   pushHistory(problem.id);
   bookmarkButton.textContent = state.bookmarks.includes(problem.id) ? "★" : "☆";
-  problemMeta.textContent = `${problem.label} · ${problem.contest} · ${problem.topic}`;
+  problemMeta.textContent = `${problem.label || "Problem"} · ${problem.contest} · ${problem.topic}`;
   problemTitle.textContent = problem.title;
   problemDifficulty.textContent = `${problem.mode} · ${problem.difficulty}`;
   problemPrompt.textContent = problem.prompt;
-  problemDataset.innerHTML = problem.datasets.map(renderDataset).join("");
+  problemDataset.innerHTML = (problem.datasets || []).map(renderDataset).join("");
 
   if (problem.sourceUrl) {
     sourceStrip.classList.remove("hidden");
@@ -873,11 +1114,13 @@ textAnswerBlock.classList.add("hidden");
     sourceStrip.classList.add("hidden");
   }
 
-  if (problem.mode === "matching") {
-    renderMatchingProblem(problem);
-  } else if (problem.mode === "translation_table") {
-    renderTranslationTable(problem);
-  } else {
+  if (problem.tasks) {
+  renderProblemTasks(problem);
+} else if (problem.mode === "matching") {
+  renderMatchingProblem(problem);
+} else if (problem.mode === "translation_table") {
+  renderTranslationTable(problem);
+} else {
     textAnswerBlock.classList.remove("hidden");
   }
 
@@ -925,6 +1168,86 @@ function renderDataset(dataset) {
 }
 
 function handleCheckAnswer() {
+ if (currentProblem.tasks) {
+  let total = 0;
+  let score = 0;
+
+  currentProblem.tasks.forEach((task, taskIndex) => {
+
+    // 🔹 MATCHING TASK
+    if (task.mode === "matching") {
+      const selects = document.querySelectorAll(`[data-task-match-index^="${taskIndex}-"]`);
+      const selections = [];
+
+      selects.forEach((select, i) => {
+        selections[i] = select.value;
+      });
+
+      if (selections.some(v => !v)) {
+        setFeedback(resultCard, "Complete all matching items.", "error");
+        return;
+      }
+
+      const correctAnswers = task.answerKey;
+
+      selects.forEach((select, i) => {
+        const user = selections[i];
+        const correct = correctAnswers[i];
+
+        select.classList.remove("correct-select", "wrong-select");
+
+        if (user === correct) {
+          score++;
+          select.classList.add("correct-select");
+        } else {
+          select.classList.add("wrong-select");
+        }
+
+        total++;
+      });
+    }
+
+    // 🔹 TRANSLATION TASK
+    if (task.mode === "translation_table") {
+      const inputs = document.querySelectorAll(`.translation-input[data-task="${taskIndex}"]`);
+
+      inputs.forEach(input => {
+        const tableIndex = Number(input.dataset.table);
+        const rowIndex = Number(input.dataset.row);
+
+        const answers =
+          task.translationTables[tableIndex]
+            .acceptableAnswers[rowIndex];
+
+        const user = input.value.trim().toLowerCase();
+
+        const correct = answers.some(a => a.toLowerCase() === user);
+
+        input.classList.remove("correct-cell", "wrong-cell");
+
+        if (correct) {
+          score++;
+          input.classList.add("correct-cell");
+        } else {
+          input.classList.add("wrong-cell");
+        }
+
+        total++;
+      });
+    }
+
+  });
+
+  updateProblemScoreDisplay(score, total);
+
+  setFeedback(
+    resultCard,
+    `You scored ${score} / ${total}.`,
+    score === total ? "success" : "error"
+  );
+
+  return;
+}
   if (!currentProblem) {
     return;
   }
@@ -935,30 +1258,48 @@ function handleCheckAnswer() {
   let total = null;
 
   if (currentProblem.mode === "matching") {
-    if (currentMatchSelections.some((item) => !item)) {
-      setFeedback(resultCard, "Complete each match slot before checking.", "error");
-      return;
-    }
+  if (currentMatchSelections.some((item) => !item)) {
+    setFeedback(resultCard, "Complete each match slot before checking.", "error");
+    return;
+  }
 
-    answerValue = currentMatchSelections.join("");
-    total = currentProblem.answerKey.length;
-    score = countCorrectMatches(currentProblem.answerKey, currentMatchSelections);
-    correct = score === total;
-    updateProblemScoreDisplay(score, total);
-  } else if (currentProblem.mode === "translation_table") {
-    const inputs = [...document.querySelectorAll(".translation-input")];
-    if (inputs.some((input) => !input.value.trim())) {
-      setFeedback(resultCard, "Complete each table row before checking.", "error");
-      return;
-    }
+  answerValue = currentMatchSelections.join("");
+  total = currentProblem.answerKey.length;
+  score = countCorrectMatches(currentProblem.answerKey, currentMatchSelections);
+  correct = score === total;
 
-    const tableResult = checkTranslationTable(currentProblem);
-    correct = tableResult.correct;
-    score = tableResult.score;
-    total = tableResult.total;
-    answerValue = tableResult.results.map((item) => item.userAnswer);
-    updateProblemScoreDisplay(score, total);
-  } else {
+  // 🔥 ADD THIS BLOCK
+  const selects = [...document.querySelectorAll("[data-match-index]")];
+
+  selects.forEach((select, index) => {
+    const user = currentMatchSelections[index];
+    const correctAnswer = currentProblem.answerKey[index];
+
+    select.classList.remove("correct-select", "wrong-select");
+
+    if (user === correctAnswer) {
+      select.classList.add("correct-select");
+    } else {
+      select.classList.add("wrong-select");
+    }
+  });
+
+  updateProblemScoreDisplay(score, total);
+} else if (currentProblem.mode === "translation_table") {
+  const inputs = [...document.querySelectorAll(".translation-input")];
+
+  if (inputs.some((input) => !input.value.trim())) {
+    setFeedback(resultCard, "Complete each table row before checking.", "error");
+    return;
+  }
+
+  const tableResult = checkTranslationTable(currentProblem);
+  correct = tableResult.correct;
+  score = tableResult.score;
+  total = tableResult.total;
+  answerValue = tableResult.results.map((item) => item.userAnswer);
+  updateProblemScoreDisplay(score, total);
+} else {
     const answer = answerInput.value.trim();
     if (!answer) {
       setFeedback(resultCard, "Add an answer first so the problem can be checked.", "error");
@@ -1288,19 +1629,43 @@ function normalize(value) {
   return value.toLowerCase().trim().replace(/\s+/g, " ").replace(/[^\p{L}\p{N}\-?]+/gu, "");
 }
 
+function getTranslationTables(problem) {
+  if (Array.isArray(problem.translationTables) && problem.translationTables.length) {
+    return problem.translationTables;
+  }
+
+  if (problem.translationTable) {
+    return [
+      {
+        title: "Task 1",
+        prompt: problem.prompt || "Complete the table.",
+        headers: problem.translationTable.headers,
+        rows: problem.translationTable.rows,
+        acceptableAnswers: problem.acceptableAnswers || []
+      }
+    ];
+  }
+
+  return [];
+}
+
 function renderTranslationTable(problem) {
+  const tables = getTranslationTables(problem);
+
   translationTablePanel.classList.remove("hidden");
-  translationTableWrap.innerHTML = `
-    <section class="dataset-card">
-      <h4>Translation task</h4>
+
+  translationTableWrap.innerHTML = tables.map((table, tableIndex) => `
+    <section class="dataset-card translation-task-card">
+      <h4>${table.title || `Task ${tableIndex + 1}`}</h4>
+      <p class="problem-copy">${table.prompt || ""}</p>
       <table class="dataset-table translation-input-table">
         <thead>
           <tr>
-            ${problem.translationTable.headers.map((header) => `<th>${header}</th>`).join("")}
+            ${table.headers.map((header) => `<th>${header}</th>`).join("")}
           </tr>
         </thead>
         <tbody>
-          ${problem.translationTable.rows.map((row, index) => `
+          ${table.rows.map((row, rowIndex) => `
             <tr>
               <td>${row.label}</td>
               <td>${row.prompt}</td>
@@ -1308,7 +1673,8 @@ function renderTranslationTable(problem) {
                 <input
                   type="text"
                   class="translation-input"
-                  data-translation-index="${index}"
+                  data-table-index="${tableIndex}"
+                  data-row-index="${rowIndex}"
                   placeholder="Type your translation..."
                 />
               </td>
@@ -1317,7 +1683,146 @@ function renderTranslationTable(problem) {
         </tbody>
       </table>
     </section>
-  `;
+  `).join("");
+
+  translationTableWrap.addEventListener("input", handleTranslationInputReset);
+}
+
+function renderProblemTasks(problem) {
+  matchingPanel.classList.add("hidden");
+  translationTablePanel.classList.add("hidden");
+  textAnswerBlock.classList.add("hidden");
+
+  problemDataset.innerHTML = (problem.datasets || []).map(renderDataset).join("");
+
+  problem.tasks.forEach((task, taskIndex) => {
+    const taskCard = document.createElement("section");
+    taskCard.className = "dataset-card";
+
+    const title = document.createElement("h4");
+    title.textContent = task.title || `Task ${taskIndex + 1}`;
+    taskCard.appendChild(title);
+
+    const prompt = document.createElement("p");
+    prompt.className = "problem-copy";
+    prompt.textContent = task.prompt || "";
+    taskCard.appendChild(prompt);
+
+    if (task.mode === "matching") {
+      const matchingWrap = document.createElement("div");
+      matchingWrap.className = "matching-task-block";
+
+      const promptsHtml = task.matching.prompts
+        .map((item) => `<div class="match-item">${item}</div>`)
+        .join("");
+
+      const optionsHtml = task.matching.options
+        .map((item) => `<div class="match-item"><strong>${item.key}</strong> ${item.text}</div>`)
+        .join("");
+
+      const gridHtml = task.matching.prompts.map((_, index) => {
+        const options = [
+          '<option value="">-</option>',
+          ...task.matching.options.map((item) => `<option value="${item.key}">${item.key}</option>`)
+        ].join("");
+
+        return `
+          <div class="match-select">
+            <label for="task-${taskIndex}-match-${index}">Item ${index + 1}</label>
+            <select id="task-${taskIndex}-match-${index}" data-task-match-index="${taskIndex}-${index}">
+              ${options}
+            </select>
+          </div>
+        `;
+      }).join("");
+
+      matchingWrap.innerHTML = `
+        <div class="matching-columns">
+          <section class="match-card">
+            <h4>Prompt Set</h4>
+            <div class="match-list">${promptsHtml}</div>
+          </section>
+          <section class="match-card">
+            <h4>Options</h4>
+            <div class="match-list">${optionsHtml}</div>
+          </section>
+        </div>
+        <div class="match-grid-wrap">
+          <p class="problem-copy">Choose one letter for each numbered item.</p>
+          <div class="matching-grid">${gridHtml}</div>
+        </div>
+      `;
+
+      taskCard.appendChild(matchingWrap);
+
+      task._selections = new Array(task.matching.prompts.length).fill("");
+
+      matchingWrap.querySelectorAll("[data-task-match-index]").forEach((select) => {
+        select.addEventListener("change", () => {
+          const [, rowIndex] = select.dataset.taskMatchIndex.split("-").map(Number);
+          task._selections[rowIndex] = select.value;
+          select.classList.remove("correct-select", "wrong-select");
+        });
+      });
+    }
+
+    if (task.mode === "translation_table") {
+      const tables = task.translationTables || [];
+
+      tables.forEach((table, tableIndex) => {
+        const tableWrap = document.createElement("div");
+        tableWrap.className = "translation-task-card";
+
+        tableWrap.innerHTML = `
+          <p class="problem-copy">${table.prompt || ""}</p>
+          <table class="dataset-table translation-input-table">
+            <thead>
+              <tr>
+                ${table.headers.map((header) => `<th>${header}</th>`).join("")}
+              </tr>
+            </thead>
+            <tbody>
+              ${table.rows.map((row, rowIndex) => `
+                <tr>
+                  <td>${row.label}</td>
+                  <td>${row.prompt}</td>
+                  <td>
+                    <input
+                      type="text"
+                      class="translation-input"
+                      data-task="${taskIndex}"
+                      data-table="${tableIndex}"
+                      data-row="${rowIndex}"
+                      placeholder="Type your translation..."
+                    />
+                  </td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        `;
+
+        taskCard.appendChild(tableWrap);
+      });
+    }
+
+    problemDataset.appendChild(taskCard);
+  });
+}
+
+
+function handleTranslationInputReset(event) {
+  if (event.target.classList.contains("translation-input")) {
+    event.target.classList.remove("correct-cell", "wrong-cell");
+  }
+}
+
+function normalizeLoose(value) {
+  return String(value || "")
+    .toLowerCase()
+    .trim()
+    .replace(/[’']/g, "'")
+    .replace(/\s+/g, " ");
 }
 
 function normalizeLoose(value) {
@@ -1329,13 +1834,19 @@ function normalizeLoose(value) {
 }
 
 function checkTranslationTable(problem) {
+  const tables = getTranslationTables(problem);
   const inputs = [...document.querySelectorAll(".translation-input")];
+
   const results = [];
   let score = 0;
+  let total = 0;
 
-  inputs.forEach((input, index) => {
+  inputs.forEach((input) => {
+    const tableIndex = Number(input.dataset.tableIndex);
+    const rowIndex = Number(input.dataset.rowIndex);
+
+    const accepted = (tables[tableIndex]?.acceptableAnswers?.[rowIndex] || []).map(normalizeLoose);
     const userAnswer = normalizeLoose(input.value);
-    const accepted = (problem.acceptableAnswers[index] || []).map(normalizeLoose);
     const isCorrect = accepted.includes(userAnswer);
 
     input.classList.remove("correct-cell", "wrong-cell");
@@ -1347,8 +1858,11 @@ function checkTranslationTable(problem) {
       input.classList.add("wrong-cell");
     }
 
+    total += 1;
+
     results.push({
-      index,
+      tableIndex,
+      rowIndex,
       userAnswer: input.value,
       correct: isCorrect
     });
@@ -1356,11 +1870,131 @@ function checkTranslationTable(problem) {
 
   return {
     score,
-    total: inputs.length,
-    correct: score === inputs.length,
+    total,
+    correct: score === total,
     results
   };
 }
 
+async function signUp(email, password) {
+  const { data, error } = await supabaseClient.auth.signUp({
+    email,
+    password
+  });
+  if (error) throw error;
+  return data;
+}
 
+async function signIn(email, password) {
+  const { data, error } = await supabaseClient.auth.signInWithPassword({
+    email,
+    password
+  });
+  if (error) throw error;
+  return data;
+}
 
+async function signOut() {
+  const { error } = await supabaseClient.auth.signOut();
+  if (error) throw error;
+}
+
+async function getCurrentUser() {
+  const { data, error } = await supabaseClient.auth.getUser();
+  if (error) throw error;
+  return data.user;
+}
+
+async function updateAuthUI() {
+  try {
+    const user = await getCurrentUser();
+    authStatus.textContent = user
+      ? `Signed in as ${user.email}`
+      : "Not signed in.";
+  } catch (error) {
+    authStatus.textContent = "Auth status unavailable.";
+  }
+}
+
+async function loadUserData() {
+  const user = await getCurrentUser();
+  if (!user) return;
+
+  const [{ data: bookmarks }, { data: reviewQueue }] = await Promise.all([
+    supabaseClient
+      .from("bookmarks")
+      .select("problem_id")
+      .eq("user_id", user.id),
+    supabaseClient
+      .from("review_queue")
+      .select("problem_id")
+      .eq("user_id", user.id)
+  ]);
+
+  state.bookmarks = (bookmarks || []).map(row => row.problem_id);
+  state.reviewQueue = (reviewQueue || []).map(row => row.problem_id);
+
+  persistState();
+  renderDashboard();
+  renderReview();
+
+  if (currentProblem) {
+    bookmarkButton.textContent = state.bookmarks.includes(currentProblem.id) ? "★" : "☆";
+  }
+}
+
+async function saveBookmarkToCloud(problemId) {
+  const user = await getCurrentUser();
+  if (!user) return;
+
+  await supabaseClient.from("bookmarks").upsert({
+    user_id: user.id,
+    problem_id: problemId
+  });
+}
+
+async function removeBookmarkFromCloud(problemId) {
+  const user = await getCurrentUser();
+  if (!user) return;
+
+  await supabaseClient
+    .from("bookmarks")
+    .delete()
+    .eq("user_id", user.id)
+    .eq("problem_id", problemId);
+}
+
+async function saveReviewItemToCloud(problemId) {
+  const user = await getCurrentUser();
+  if (!user) return;
+
+  await supabaseClient.from("review_queue").upsert({
+    user_id: user.id,
+    problem_id: problemId
+  });
+}
+
+async function removeReviewItemFromCloud(problemId) {
+  const user = await getCurrentUser();
+  if (!user) return;
+
+  await supabaseClient
+    .from("review_queue")
+    .delete()
+    .eq("user_id", user.id)
+    .eq("problem_id", problemId);
+}
+
+async function saveAttemptToCloud(attempt) {
+  const user = await getCurrentUser();
+  if (!user) return;
+
+  await supabaseClient.from("attempts").insert({
+    user_id: user.id,
+    problem_id: attempt.problemId,
+    correct: attempt.correct,
+    answer: attempt.answer,
+    score: attempt.score ?? null,
+    total: attempt.total ?? null
+  });
+}

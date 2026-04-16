@@ -817,3 +817,51 @@ textarea {
   box-shadow: 0 0 0 1px rgba(255, 107, 107, 0.22);
 }
 
+.auth-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.auth-grid input {
+  width: 100%;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: #141414;
+  color: var(--text);
+  padding: 12px 13px;
+  font: inherit;
+}
+
+#authCard .button-row.compact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+#authCard .primary-button,
+#authCard .ghost-button {
+  flex: 1 1 auto;
+}
+
+#authCard .feedback-card {
+  margin-top: 4px;
+}
+
+.sidebar-inner {
+  overflow-y: auto;
+}
+
+.correct-select {
+  border: 2px solid #4CAF50 !important;
+  background-color: rgba(76, 175, 80, 0.1);
+}
+
+.wrong-select {
+  border: 2px solid #ff4d4f !important;
+  background-color: rgba(255, 77, 79, 0.1);
+}
+
+.translation-task-card + .translation-task-card {
+  margin-top: 1rem;
+}
+
